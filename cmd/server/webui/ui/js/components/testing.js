@@ -80,6 +80,12 @@ class Testing {
                             <span class="badge badge-success">Success</span>
                             <span class="text-muted ml-2">Latency: ${result.latency}ms</span>
                         </div>
+                        ${result.method || result.status ? `
+                            <div class="mb-2">
+                                <strong>Method:</strong> <span class="badge badge-info">${this.escapeHtml(result.method || '-')}</span>
+                                <strong class="ml-2">Status:</strong> <span class="badge badge-secondary">${this.escapeHtml(result.status || '-')}</span>
+                            </div>
+                        ` : ''}
                         <div>
                             <strong>Response:</strong>
                             <div class="code-block mt-1">${this.escapeHtml(result.response || 'No response')}</div>
@@ -93,6 +99,12 @@ class Testing {
                         <div class="mb-2">
                             <span class="badge badge-danger">Failed</span>
                         </div>
+                        ${result.method || result.status ? `
+                            <div class="mb-2">
+                                <strong>Method:</strong> <span class="badge badge-info">${this.escapeHtml(result.method || '-')}</span>
+                                <strong class="ml-2">Status:</strong> <span class="badge badge-secondary">${this.escapeHtml(result.status || '-')}</span>
+                            </div>
+                        ` : ''}
                         <div>
                             <strong>Error:</strong>
                             <div class="code-block mt-1">${this.escapeHtml(result.error || 'Unknown error')}</div>

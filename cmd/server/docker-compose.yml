@@ -3,20 +3,16 @@ services:
     build:
       context: ../..
       dockerfile: cmd/server/Dockerfile
-    container_name: ccnexus
     restart: unless-stopped
     ports:
-      - "3021:3000"
+      - "3000:3000"
     volumes:
-      - /data/ccnexus/:/data
+      - ccnexus-data:/data
     environment:
       - CCNEXUS_PORT=3000
       - CCNEXUS_DATA_DIR=/data
       - CCNEXUS_DB_PATH=/data/ccnexus.db
       - TZ=Asia/Shanghai
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+
+volumes:
+  ccnexus-data:

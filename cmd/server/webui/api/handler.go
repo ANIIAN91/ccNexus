@@ -5,6 +5,7 @@ import (
 
 	"github.com/lich0821/ccNexus/internal/config"
 	"github.com/lich0821/ccNexus/internal/proxy"
+	"github.com/lich0821/ccNexus/internal/service"
 	"github.com/lich0821/ccNexus/internal/storage"
 )
 
@@ -13,14 +14,18 @@ type Handler struct {
 	config  *config.Config
 	proxy   *proxy.Proxy
 	storage *storage.SQLiteStorage
+	endpoint *service.EndpointService
+	webdav  *service.WebDAVService
 }
 
 // NewHandler creates a new API handler
-func NewHandler(cfg *config.Config, p *proxy.Proxy, s *storage.SQLiteStorage) *Handler {
+func NewHandler(cfg *config.Config, p *proxy.Proxy, s *storage.SQLiteStorage, version string) *Handler {
 	return &Handler{
 		config:  cfg,
 		proxy:   p,
 		storage: s,
+		endpoint: service.NewEndpointService(cfg, p, s),
+		webdav:  service.NewWebDAVService(cfg, s, version),
 	}
 }
 
@@ -48,4 +53,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Real-time events
 	mux.HandleFunc("/api/events", h.handleEvents)
+
+	// WebDAV
+	mux.HandleFunc("/api/webdav/config", h.handleWebDAVConfig)
+	mux.HandleFunc("/api/webdav/test", h.handleWebDAVTest)
+	mux.HandleFunc("/api/webdav/backups", h.handleWebDAVBackups)
+	mux.HandleFunc("/api/webdav/backup", h.handleWebDAVBackup)
+	mux.HandleFunc("/api/webdav/restore", h.handleWebDAVRestore)
+	mux.HandleFunc("/api/webdav/conflict", h.handleWebDAVConflict)
 }

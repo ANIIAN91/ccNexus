@@ -117,6 +117,39 @@ class APIClient {
     async updateLogLevel(logLevel) {
         return this.request('PUT', '/config/log-level', { logLevel });
     }
+
+    // WebDAV
+    async getWebDAVConfig() {
+        return this.request('GET', '/webdav/config');
+    }
+
+    async updateWebDAVConfig(url, username, password) {
+        return this.request('PUT', '/webdav/config', { url, username, password });
+    }
+
+    async testWebDAV(url, username, password) {
+        return this.request('POST', '/webdav/test', { url, username, password });
+    }
+
+    async listWebDAVBackups() {
+        return this.request('GET', '/webdav/backups');
+    }
+
+    async backupToWebDAV(filename = '') {
+        return this.request('POST', '/webdav/backup', { filename });
+    }
+
+    async restoreFromWebDAV(filename, choice = 'remote') {
+        return this.request('POST', '/webdav/restore', { filename, choice });
+    }
+
+    async deleteWebDAVBackups(filenames) {
+        return this.request('DELETE', '/webdav/backups', { filenames });
+    }
+
+    async detectWebDAVConflict(filename) {
+        return this.request('GET', `/webdav/conflict?filename=${encodeURIComponent(filename)}`);
+    }
 }
 
 export const api = new APIClient();

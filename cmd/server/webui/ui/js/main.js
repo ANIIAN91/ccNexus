@@ -4,6 +4,7 @@ import { dashboard } from './components/dashboard.js';
 import { endpoints } from './components/endpoints.js';
 import { stats } from './components/stats.js';
 import { testing } from './components/testing.js';
+import { webdav } from './components/webdav.js';
 
 // Initialize theme
 function initTheme() {
@@ -61,6 +62,7 @@ function init() {
     router.register('endpoints', endpoints);
     router.register('stats', stats);
     router.register('testing', testing);
+    router.register('webdav', webdav);
 
     // Initialize theme
     initTheme();

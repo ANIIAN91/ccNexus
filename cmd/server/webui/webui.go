@@ -2,6 +2,8 @@ package webui
 
 import (
 	"embed"
+	"runtime/debug"
+	"strings"
 	"io/fs"
 	"net/http"
 
@@ -19,10 +21,20 @@ type WebUI struct {
 	apiHandler *api.Handler
 }
 
+func resolveVersion() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		v := strings.TrimSpace(info.Main.Version)
+		if v != "" && v != "(devel)" {
+			return v
+		}
+	}
+	return "dev"
+}
+
 // New creates a new WebUI instance
 func New(cfg *config.Config, p *proxy.Proxy, storage *storage.SQLiteStorage) *WebUI {
 	return &WebUI{
-		apiHandler: api.NewHandler(cfg, p, storage),
+		apiHandler: api.NewHandler(cfg, p, storage, resolveVersion()),
 	}
 }
 

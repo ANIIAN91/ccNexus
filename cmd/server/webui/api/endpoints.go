@@ -120,6 +120,13 @@ func (h *Handler) createEndpoint(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, http.StatusBadRequest, "Name, apiUrl, and apiKey are required")
 		return
 	}
+	if strings.TrimSpace(req.Transformer) == "" {
+		req.Transformer = "claude"
+	}
+	if req.Transformer != "claude" && strings.TrimSpace(req.Model) == "" {
+		WriteError(w, http.StatusBadRequest, "model is required for non-claude transformer")
+		return
+	}
 
 	// Get current endpoints to determine sort order
 	endpoints, err := h.storage.GetEndpoints()
@@ -172,7 +179,7 @@ func (h *Handler) updateEndpoint(w http.ResponseWriter, r *http.Request, name st
 		Name        string `json:"name"`
 		APIUrl      string `json:"apiUrl"`
 		APIKey      string `json:"apiKey"`
-		Enabled     bool   `json:"enabled"`
+		Enabled     *bool  `json:"enabled"`
 		Transformer string `json:"transformer"`
 		Model       string `json:"model"`
 		Remark      string `json:"remark"`
@@ -214,7 +221,9 @@ func (h *Handler) updateEndpoint(w http.ResponseWriter, r *http.Request, name st
 	if req.APIKey != "" {
 		existing.APIKey = req.APIKey
 	}
-	existing.Enabled = req.Enabled
+	if req.Enabled != nil {
+		existing.Enabled = *req.Enabled
+	}
 	if req.Transformer != "" {
 		existing.Transformer = req.Transformer
 	}
@@ -222,6 +231,13 @@ func (h *Handler) updateEndpoint(w http.ResponseWriter, r *http.Request, name st
 		existing.Model = req.Model
 	}
 	existing.Remark = req.Remark
+	if strings.TrimSpace(existing.Transformer) == "" {
+		existing.Transformer = "claude"
+	}
+	if existing.Transformer != "claude" && strings.TrimSpace(existing.Model) == "" {
+		WriteError(w, http.StatusBadRequest, "model is required for non-claude transformer")
+		return
+	}
 	existing.UpdatedAt = time.Now()
 
 	if err := h.storage.UpdateEndpoint(existing); err != nil {
@@ -320,28 +336,14 @@ func (h *Handler) handleCurrentEndpoint(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	endpoints := h.config.GetEndpoints()
-	if len(endpoints) == 0 {
-		WriteError(w, http.StatusNotFound, "No endpoints configured")
-		return
-	}
-
-	// Get enabled endpoints
-	var enabledEndpoints []config.Endpoint
-	for _, ep := range endpoints {
-		if ep.Enabled {
-			enabledEndpoints = append(enabledEndpoints, ep)
-		}
-	}
-
-	if len(enabledEndpoints) == 0 {
+	name := h.proxy.GetCurrentEndpointName()
+	if name == "" {
 		WriteError(w, http.StatusNotFound, "No enabled endpoints")
 		return
 	}
 
-	// Return first enabled endpoint as current
 	WriteSuccess(w, map[string]interface{}{
-		"name": enabledEndpoints[0].Name,
+		"name": name,
 	})
 }
 
@@ -361,17 +363,7 @@ func (h *Handler) handleSwitchEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify endpoint exists
-	endpoints := h.config.GetEndpoints()
-	found := false
-	for _, ep := range endpoints {
-		if ep.Name == req.Name && ep.Enabled {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if err := h.proxy.SetCurrentEndpoint(req.Name); err != nil {
 		WriteError(w, http.StatusNotFound, "Endpoint not found or not enabled")
 		return
 	}
@@ -405,11 +397,29 @@ func (h *Handler) handleReorderEndpoints(w http.ResponseWriter, r *http.Request)
 		WriteError(w, http.StatusInternalServerError, "Failed to get endpoints")
 		return
 	}
+	if len(req.Names) != len(endpoints) {
+		WriteError(w, http.StatusBadRequest, "names array length doesn't match endpoints count")
+		return
+	}
+	seen := make(map[string]bool, len(req.Names))
+	for _, n := range req.Names {
+		if seen[n] {
+			WriteError(w, http.StatusBadRequest, "duplicate endpoint name in reorder request")
+			return
+		}
+		seen[n] = true
+	}
 
 	// Create a map for quick lookup
 	endpointMap := make(map[string]*storage.Endpoint)
 	for i := range endpoints {
 		endpointMap[endpoints[i].Name] = &endpoints[i]
+	}
+	for _, n := range req.Names {
+		if _, ok := endpointMap[n]; !ok {
+			WriteError(w, http.StatusBadRequest, "endpoint not found in reorder request")
+			return
+		}
 	}
 
 	// Update sort order
